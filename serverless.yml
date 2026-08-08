@@ -1,0 +1,49 @@
+service: serverless-image-platform
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource: "arn:aws:s3:::${self:custom.uploadsBucket}/*"
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+          Resource: "arn:aws:s3:::${self:custom.processedBucket}/*"
+
+custom:
+  uploadsBucket: ${self:service}-uploads-${sls:stage}
+  processedBucket: ${self:service}-processed-${sls:stage}
+
+functions:
+  processImage:
+    handler: src/handler.process
+    events:
+      - s3:
+          bucket: ${self:custom.uploadsBucket}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .jpg
+      - s3:
+          bucket: ${self:custom.uploadsBucket}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .png
+      - s3:
+          bucket: ${self:custom.uploadsBucket}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .jpeg
+
+resources:
+  Resources:
+    ProcessedBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.processedBucket}
